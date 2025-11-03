@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔗 FastLink - Redis URL Shortener</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            height: 100vh;
+            padding-top: 40px;
+        }
+        h1 { color: #333; }
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            width: 350px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        input[type="text"] {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { opacity: 0.9; }
+        .result { margin-top: 10px; }
+        table {
+            border-collapse: collapse;
+            width: 90%;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th { background-color: #f0f0f0; }
+        a { color: #007BFF; text-decoration: none; }
+        .btn-sm {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-update { background-color: #ff9800; color: white; }
+        .btn-delete { background-color: #f44336; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔗 FastLink - Redis URL Shortener</h1>
+
+    <form id="urlForm">
+        <input type="text" id="urlInput" placeholder="Enter a long URL..." required>
+        <br>
+        <button type="submit">Create Short URL</button>
+    </form>
+
+    <div class="result" id="result"></div>
+
+    <table id="linksTable">
+        <thead>
+            <tr>
+                <th>Short Code</th>
+                <th>Original URL</th>
+                <th>Short URL</th>
+                <th>Clicks</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        // Fetch all links and display in table
+        async function fetchAllLinks() {
+            const response = await fetch("/all");
+            const data = await response.json();
+            const tbody = document.querySelector("#linksTable tbody");
+            tbody.innerHTML = "";
+            data.forEach(link => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${link.code}</td>
+                    <td><a href="${link.original_url}" target="_blank">${link.original_url}</a></td>
+                    <td><a href="/${link.code}" target="_blank">/${link.code}</a></td>
+                    <td>${link.clicks}</td>
+                    <td>
+                        <button class="btn-sm btn-update" onclick="updateURL('${link.code}')">Update</button>
+                        <button class="btn-sm btn-delete" onclick="deleteURL('${link.code}')">Delete</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Handle form submission (Create)
+        document.getElementById("urlForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const url = document.getElementById("urlInput").value;
+            const response = await fetch("/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url })
+            });
+            const data = await response.json();
+            if (data.short_code) {
+                document.getElementById("result").innerHTML =
+                    `✅ Short URL created: <a href="/${data.short_code}" target="_blank">http://localhost:5000/${data.short_code}</a>`;
+                document.getElementById("urlInput").value = "";
+                fetchAllLinks();
+            } else {
+                document.getElementById("result").innerText = "Error: " + (data.error || "Unknown");
+            }
+        });
+
+        // ✏️ Update URL
+        async function updateURL(code) {
+            const newURL = prompt("Enter the new URL for short code " + code + ":");
+            if (!newURL) return;
+            const response = await fetch(`/update/${code}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: newURL })
+            });
+            const result = await response.json();
+            alert(result.message);
+            fetchAllLinks();
+        }
+
+        // ❌ Delete URL
+        async function deleteURL(code) {
+            if (!confirm(`Are you sure you want to delete short code: ${code}?`)) return;
+            const response = await fetch(`/delete/${code}`, { method: "DELETE" });
+            const result = await response.json();
+            alert(result.message);
+            fetchAllLinks();
+        }
+
+        // Load all links on page load
+        fetchAllLinks();
+    </script>
+</body>
+</html>
