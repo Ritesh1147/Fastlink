@@ -74,5 +74,5 @@ Response:
 
 That’s it! 🎉
 Your Redis URL Shortener with full CRUD functionality is ready.
-
-Would you like me to add a section for deployment (like how to run it on Render or PythonAnywhere) at the
+Author
+Ritesh k Reddy
